@@ -21,32 +21,41 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-print(args.no_safety)
-
 for glob_path in args.paths:
     paths = glob.glob(glob_path)
     if len(paths) == 0:
-        print('No files matching the glob "' + glob_path + '" found.')
+        print('No files matching the glob "{0}" found.'.format(glob_path))
 
     for path in paths:
-        print('File "' + path + '" found.')
+        print('File "{0}" found.'.format(path))
 
         with open(path, "rb") as f:
             pdf = pdftotext.PDF(f)
 
         for page in pdf:
-            match = re.search(regex, page)
+            matches = list(re.finditer(regex, page))
+            match = None
+            if len(matches) == 1:
+                match = matches[0]
+            if len(matches) > 1:
+                print(
+                    "Multiple matches found, choose a match to use (0-{0}):".format(
+                        len(matches) - 1
+                    )
+                )
+                for index, m in enumerate(matches):
+                    print("\t[{0}]: {1}".format(index, m.group(1)))
+                match = matches[int(input())]
+
             if match:
-                # The second group match should be the personal number
                 if not args.no_safety:
-                    print('Personal number match found: "' + match.group(1) + '"')
+                    # The second group match should be the personal number
+                    print("Personal number match found:", match.group(1))
                     new_name = match.group(1) + ".pdf"
                     should_rename = input(
-                        'Would you like to rename "'
-                        + path
-                        + '" to "'
-                        + new_name
-                        + '"? (y/n): '
+                        'Would you like to rename "{0}" to "{1}"? (y/n): '.format(
+                            path, new_name
+                        )
                     )
                     if should_rename in ["yes", "Yes", "y", "Y"]:
                         os.rename(path, match.group(1) + ".pdf")
